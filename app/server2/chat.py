@@ -122,6 +122,9 @@ class Chat:
 					return self.group_chat(username, groupname, state, socket)
 				else:
 					return {'status': 'ERROR', 'message': 'Session Tidak Ditemukan'}
+			elif (command=='logout'):
+				sessionid = j[1].strip()
+				return self.logout(sessionid)
 			else:
 				return {'status': 'ERROR', 'message': '**Protocol Tidak Benar'}
 		except KeyError:
@@ -129,6 +132,12 @@ class Chat:
 		except IndexError:
 			return {'status': 'ERROR', 'message': '--Protocol Tidak Benar'}
 	
+	def logout(self, sessionid):
+		if sessionid not in self.sessions:
+			return {'status': 'ERROR', 'message': 'Session tidak ditemukan'}
+		self.sessions.pop(sessionid)
+		return {'status': 'OK', 'message': 'Berhasil log out'}
+
 	def registration(self, username, nama1, nama2, negara, password):
 		# Urutan input yang diminta: username, nama, negara, password
 		try:
