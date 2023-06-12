@@ -1,12 +1,14 @@
 import sys
 import os
 import json
+import base64
 import uuid
 import logging
 from queue import  Queue
 
 class Chat:
 	def __init__(self):
+		self.groups={}
 		self.sessions={}
 		self.users = {}
 		self.users['messi']={ 'nama': 'Lionel Messi', 'negara': 'Argentina', 'password': 'surabaya', 'incoming' : {}, 'outgoing': {}}
@@ -63,7 +65,7 @@ class Chat:
 		self.groups[groupname].remove(client)
 	##### -----
 	
-	def proses(self,data):
+	def proses(self, data, socket=[]):
 		j=data.split(" ")
 		try:
 			command=j[0].strip()
@@ -72,7 +74,6 @@ class Chat:
 				password=j[2].strip()
 				logging.warning("AUTH: auth {} {}" . format(username,password))
 				return self.autentikasi_user(username,password)
-
 			elif (command == "regis"):
 				logging.warning("REGIS: registration new user")
 				username=j[1]
@@ -81,7 +82,9 @@ class Chat:
 				negara=j[4]
 				password=j[5]
 				return self.registration(username, nama1, nama2, negara, password)
-			
+			elif (command=='logout'):
+				sessionid = j[1].strip()
+				return self.logout(sessionid)
 			elif (command=='send'):
 				sessionid = j[1].strip()
 				usernameto = j[2].strip()
@@ -110,15 +113,23 @@ class Chat:
 				params = [x for x in j[2:]]
 				logging.warning('UPLOAD: session {} upload file {}'.format(sessionid, params[0]))
 				return self.upload_file(params)
-			elif (command=='logout'):
-				sessionid = j[1].strip()
-				return self.logout(sessionid)
+			elif (command=='group'):
+				sessionid = j[1]
+				groupname = j[2]
+				state = j[3]
+				logging.warning("GROUP: {}".format(groupname))
+				username = self.sessions[sessionid]['username']
+				if username:
+					return self.group_chat(username, groupname, state, socket)
+				else:
+					return {'status': 'ERROR', 'message': 'Session Tidak Ditemukan'}
 			else:
 				return {'status': 'ERROR', 'message': '**Protocol Tidak Benar'}
 		except KeyError:
 			return { 'status': 'ERROR', 'message' : 'Informasi tidak ditemukan'}
 		except IndexError:
 			return {'status': 'ERROR', 'message': '--Protocol Tidak Benar'}
+	
 		
 	def logout(self, sessionid):
 		if sessionid  not in self.sessions:
@@ -189,7 +200,7 @@ class Chat:
 			filename = params[0]
 			if filename=='':
 				return {'status':'ERROR', 'message': 'Masukkan nama file'}
-			with open(f'files/{filename}', 'rb') as fp:
+			with open(f'../files/{filename}', 'rb') as fp:
 				filecontent = base64.b64encode(fp.read()).decode()
 			print("Mengirim file Kembali")
 			return {'status': 'OK', 'message': 'File telah diterima', 'file':filecontent}
@@ -202,7 +213,7 @@ class Chat:
 			isifile = base64.b64decode(params[1])
 			if filename == '' or isifile == '':
 				return {'status': 'ERROR', 'message': 'Tidak ada file yang dikirim'}
-			with open(f'files/{filename}', 'wb+') as fp:
+			with open(f'../files/{filename}', 'wb+') as fp:
 				fp.write(isifile)
 			return {'status': 'OK', 'message': 'File telah dikirim'}
 		except Exception as e:
