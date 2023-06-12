@@ -158,6 +158,18 @@ class Chat:
 			
 		return {'status': 'OK', 'messages': msgs}
 	
+	def get_file(self, params=[]):
+		try:
+			filename = params[0]
+			if filename=='':
+				return {'status':'ERROR', 'message': 'Masukkan nama file'}
+			with open(f'files/{filename}', 'rb') as fp:
+				filecontent = base64.b64encode(fp.read()).decode()
+			print("Mengirim file Kembali")
+			return {'status': 'OK', 'message': 'File telah diterima', 'file':filecontent}
+		except Exception as e:
+			return {'status': 'ERROR', "message": f'{e}'}
+	
 	def group_chat(self, username, groupname, state, socket):
 		groups = self.groups
 		client = [username, socket]
