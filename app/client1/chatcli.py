@@ -1,6 +1,9 @@
 import socket
 import os
 import json
+from threading import Thread
+
+import flet as ft
 
 TARGET_IP = os.getenv("SERVER_IP") or "127.0.0.1"
 TARGET_PORT = os.getenv("SERVER_PORT") or "8889"
@@ -14,6 +17,42 @@ class ChatClient:
         self.server_address = (TARGET_IP,int(TARGET_PORT))
         self.sock.connect(self.server_address)
         self.tokenid=""
+
+    def sendstring(self,string):
+        try:
+            self.sock.sendall(string.encode())
+            receivemsg = ""
+            while True:
+                data = self.sock.recv(64)
+                print("diterima dari server",data)
+                if (data):
+                    receivemsg = "{}{}" . format(receivemsg,data.decode())  #data harus didecode agar dapat di operasikan dalam bentuk string
+                    if receivemsg[-4:]=='\r\n\r\n':
+                        print("end of string")
+                        return json.loads(receivemsg)
+        except:
+            self.sock.close()
+            return { 'status' : 'ERROR', 'message' : 'Gagal'}
+
+    # Fungsi untuk menerima pesan grup
+    def client_received(self):
+        while True:
+            message = self.sock.recv(1024).decode()
+            if message != 'exit':
+                print(message)
+                lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+                lv.controls.append(ft.Text(f"{message}"))
+            else:
+                break
+
+    # Fungsi untuk mengirim pesan ke grup
+    def client_send(self):
+        while True:
+            chat = input("")
+            self.sock.sendall(chat.encode())
+            if chat=='exit':
+                break
+
     def proses(self,cmdline):
         j=cmdline.split(" ")
         try:
@@ -30,25 +69,13 @@ class ChatClient:
                 return self.sendmessage(usernameto,message)
             elif (command=='inbox'):
                 return self.inbox()
+            elif (command=='group'):
+                return self.groupChat(j[1])
             else:
                 return "*Maaf, command tidak benar"
         except IndexError:
                 return "-Maaf, command tidak benar"
-    def sendstring(self,string):
-        try:
-            self.sock.sendall(string.encode())
-            receivemsg = ""
-            while True:
-                data = self.sock.recv(64)
-                print("diterima dari server",data)
-                if (data):
-                    receivemsg = "{}{}" . format(receivemsg,data.decode())  #data harus didecode agar dapat di operasikan dalam bentuk string
-                    if receivemsg[-4:]=='\r\n\r\n':
-                        print("end of string")
-                        return json.loads(receivemsg)
-        except:
-            self.sock.close()
-            return { 'status' : 'ERROR', 'message' : 'Gagal'}
+
     def login(self,username,password):
         string="auth {} {} \r\n" . format(username,password)
         result = self.sendstring(string)
@@ -57,11 +84,11 @@ class ChatClient:
             return "username {} logged in, token {} " .format(username,self.tokenid)
         else:
             return "Error, {}" . format(result['message'])
+
     def sendmessage(self,usernameto="xxx",message="xxx"):
         if (self.tokenid==""):
             return "Error, not authorized"
         string="send {} {} {} \r\n" . format(self.tokenid,usernameto,message)
-        print(string)
         result = self.sendstring(string)
         if result['status']=='OK':
             return "message sent to {}" . format(usernameto)
@@ -77,6 +104,39 @@ class ChatClient:
         else:
             return "Error, {}" . format(result['message'])
 
+    def groupChat(self, namagrup):
+        if (self.tokenid==""):
+            return "Error, not authorized"
+        string='group {} {} origin \r\n'.format(self.tokenid, namagrup)
+        self.sock.sendall(string.encode())
+
+        receiveThread = Thread(target=self.client_received, args=())
+        sendThread = Thread(target=self.client_send, args=())
+        receiveThread.start()
+        sendThread.start()
+        receiveThread.join()
+        sendThread.join()
+
+        try:
+            receivemsg = ""
+            while True:
+                data = self.sock.recv(64)
+                print("diterima dari server",data)
+                if (data):
+                    receivemsg = "{}{}" . format(receivemsg,data.decode())
+                    if receivemsg[-4:]=='\r\n\r\n':
+                        print("end of string")
+                        receivemsg = json.loads(receivemsg)
+                        break
+        except:
+            self.sock.close()
+            receivemsg = { 'status' : 'ERROR', 'message' : 'Gagal'}
+        
+        if receivemsg['status']=='OK':
+            return "{}".format(receivemsg['message'])
+        else:
+            return "Error, {}".format(receivemsg['message'])
+
 
 
 if __name__=="__main__":
@@ -84,4 +144,3 @@ if __name__=="__main__":
     while True:
         cmdline = input("Command {}:" . format(cc.tokenid))
         print(cc.proses(cmdline))
-
