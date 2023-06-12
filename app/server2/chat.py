@@ -95,6 +95,13 @@ class Chat:
 				params = [x for x in j[2:]]
 				logging.warning('GET: session {} download file {}'.format(sessionid, params[0]))
 				return self.get_file(params)
+			elif (command=='upload'):
+				sessionid = j[1].strip()
+				if sessionid not in self.sessions:
+					return {'status': 'ERROR', 'message': 'Session tidak ditemukan'}
+				params = [x for x in j[2:]]
+				logging.warning('UPLOAD: session {} upload file {}'.format(sessionid, params[0]))
+				return self.upload_file(params)
 			elif (command=='group'):
 				sessionid = j[1]
 				groupname = j[2]
@@ -169,6 +176,18 @@ class Chat:
 			return {'status': 'OK', 'message': 'File telah diterima', 'file':filecontent}
 		except Exception as e:
 			return {'status': 'ERROR', "message": f'{e}'}
+		
+	def upload_file(self, params=[]):
+		try:
+			filename = params[0]
+			isifile = base64.b64decode(params[1])
+			if filename == '' or isifile == '':
+				return {'status': 'ERROR', 'message': 'Tidak ada file yang dikirim'}
+			with open(f'files/{filename}', 'wb+') as fp:
+				fp.write(isifile)
+			return {'status': 'OK', 'message': 'File telah dikirim'}
+		except Exception as e:
+			return {'status': 'ERROR', 'message': f'{e}'}
 	
 	def group_chat(self, username, groupname, state, socket):
 		groups = self.groups
