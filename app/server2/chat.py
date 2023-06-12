@@ -74,6 +74,16 @@ class Chat:
 				password=j[2].strip()
 				logging.warning("AUTH: auth {} {}" . format(username,password))
 				return self.autentikasi_user(username,password)
+
+			elif (command == "regis"):
+				logging.warning("REGIS: registration new user")
+				username=j[1]
+				nama1=j[2]
+				nama2=j[3]
+				negara=j[4]
+				password=j[5]
+				return self.registration(username, nama1, nama2, negara, password)
+			
 			elif (command=='send'):
 				sessionid = j[1].strip()
 				usernameto = j[2].strip()
@@ -118,6 +128,18 @@ class Chat:
 			return { 'status': 'ERROR', 'message' : 'Informasi tidak ditemukan'}
 		except IndexError:
 			return {'status': 'ERROR', 'message': '--Protocol Tidak Benar'}
+	
+	def registration(self, username, nama1, nama2, negara, password):
+		# Urutan input yang diminta: username, nama, negara, password
+		try:
+			print("REGIS: get username =",username)
+			if username in self.users:
+				return {'status': 'ERROR', 'message': 'Username telah digunakan'}
+			self.users[username] = {'nama': f'{nama1} {nama2}', 'negara': negara, 'password':password, 'incoming':{}, 'outgoing':{}}
+			return {'status': 'OK', 'message': 'Pendaftaran berhasil'}
+		except Exception as e:
+			return {'status': 'ERROR', 'message': f'e'}	
+	
 	def autentikasi_user(self,username,password):
 		if (username not in self.users):
 			return { 'status': 'ERROR', 'message': 'User Tidak Ada' }
