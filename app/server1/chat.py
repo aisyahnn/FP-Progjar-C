@@ -86,6 +86,13 @@ class Chat:
 				username = self.sessions[sessionid]['username']
 				logging.warning("INBOX: {}" . format(sessionid))
 				return self.get_inbox(username)
+			elif (command=='get'):
+				sessionid = j[1].strip()
+				if sessionid not in self.sessions:
+					return {'status': 'ERROR', 'message': 'Session tidak ditemukan'}
+				params = [x for x in j[2:]]
+				logging.warning('GET: session {} download file {}'.format(sessionid, params[0]))
+				return self.get_file(params)
 			else:
 				return {'status': 'ERROR', 'message': '**Protocol Tidak Benar'}
 		except KeyError:
@@ -138,6 +145,18 @@ class Chat:
 				msgs[users].append(s_fr['incoming'][users].get_nowait())
 			
 		return {'status': 'OK', 'messages': msgs}
+	
+	def get_file(self, params=[]):
+		try:
+			filename = params[0]
+			if filename=='':
+				return {'status':'ERROR', 'message': 'Masukkan nama file'}
+			with open(f'files/{filename}', 'rb') as fp:
+				filecontent = base64.b64encode(fp.read()).decode()
+			print("Mengirim file Kembali")
+			return {'status': 'OK', 'message': 'File telah diterima', 'file':filecontent}
+		except Exception as e:
+			return {'status': 'ERROR', "message": f'{e}'}
 	
 	def group_chat(self, username, groupname, state, socket):
 		groups = self.groups
