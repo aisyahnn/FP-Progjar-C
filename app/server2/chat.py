@@ -88,6 +88,13 @@ class Chat:
 				username = self.sessions[sessionid]['username']
 				logging.warning("INBOX: {}" . format(sessionid))
 				return self.get_inbox(username)
+			elif (command=='get'):
+				sessionid = j[1].strip()
+				if sessionid not in self.sessions:
+					return {'status': 'ERROR', 'message': 'Session tidak ditemukan'}
+				params = [x for x in j[2:]]
+				logging.warning('GET: session {} download file {}'.format(sessionid, params[0]))
+				return self.get_file(params)
 			elif (command=='group'):
 				sessionid = j[1]
 				groupname = j[2]
